@@ -28,13 +28,13 @@ public class UserController {
         return userService.updateUser(id, userRequest);
     }
 
-    @GetMapping
+    @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable("id") Long id) {
         return userService.getUserById(id);
     }
 
 
-    @PutMapping("archive/{id}")
+    @PutMapping("archive")
     public ResponseEntity<SimpleResponse> userStatus(@RequestParam("id") Long userId) {
         return userService.archive(userId);
     }
