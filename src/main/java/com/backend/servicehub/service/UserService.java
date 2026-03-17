@@ -1,5 +1,6 @@
 package com.backend.servicehub.service;
 
+import com.backend.servicehub.dto.request.LoginRequest;
 import com.backend.servicehub.dto.request.UserRequest;
 import com.backend.servicehub.dto.response.PaginatedResponse;
 import com.backend.servicehub.dto.response.SimpleResponse;
@@ -16,5 +17,7 @@ public interface UserService {
     ResponseEntity<SimpleResponse> archive(Long id);
 
     PaginatedResponse filterUser(String search, Boolean isActive, Integer pageSize, Integer pageCount);
+
+    String login(LoginRequest loginRequest);
 
 }

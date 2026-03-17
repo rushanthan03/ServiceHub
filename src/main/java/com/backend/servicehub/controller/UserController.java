@@ -12,24 +12,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("user")
+@RequestMapping("/api/v1/users")
 public class UserController {
     private final UserService userService;
 
-    @PostMapping
-    public ResponseEntity<SimpleResponse> saveUser(@RequestBody UserRequest userRequest) {
-        return userService.saveUser(userRequest);
-
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<SimpleResponse> updateUser(
-            @PathVariable("id") Long id, @RequestBody UserRequest userRequest) {
+            @PathVariable Long id, @RequestBody UserRequest userRequest) {
         return userService.updateUser(id, userRequest);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable("id") Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
         return userService.getUserById(id);
     }
 

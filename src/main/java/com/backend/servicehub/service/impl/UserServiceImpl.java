@@ -1,11 +1,13 @@
 package com.backend.servicehub.service.impl;
 
+import com.backend.servicehub.dto.request.LoginRequest;
 import com.backend.servicehub.dto.request.UserRequest;
 import com.backend.servicehub.dto.response.PaginatedResponse;
 import com.backend.servicehub.dto.response.SimpleResponse;
 import com.backend.servicehub.dto.response.UserResponse;
 import com.backend.servicehub.entity.User;
 import com.backend.servicehub.repository.UserRepository;
+import com.backend.servicehub.security.JwtUtil;
 import com.backend.servicehub.service.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -31,6 +37,9 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(12);
 
     @Transactional
     public ResponseEntity<SimpleResponse> saveUser(UserRequest userRequest) {
@@ -43,7 +52,7 @@ public class UserServiceImpl implements UserService {
         // New user registration
         User user = User.builder()
                 .email(normalizedEmail)
-                .password(userRequest.getPassword())
+                .password(bCryptPasswordEncoder.encode(userRequest.getPassword()))
                 .gender(userRequest.getGender())
                 .dateOfBirth(userRequest.getDateOfBirth())
                 .mobile(userRequest.getMobile())
@@ -159,6 +168,18 @@ public class UserServiceImpl implements UserService {
                 .records(petResponses)
                 .build();
 
+    }
+
+    @Override
+    public String login(LoginRequest loginRequest) {
+        Authentication authentication =
+                authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+
+        if (authentication.isAuthenticated()) {
+            return jwtUtil.generateToken(loginRequest.getEmail());
+        } else {
+            return "fail";
+        }
     }
 
 }
