@@ -7,7 +7,6 @@ import com.backend.servicehub.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,9 +25,4 @@ public class AuthController {
         return userService.saveUser(userRequest);
     }
 
-    @PostMapping(value = "/update-profile-image")
-    public ResponseEntity<SimpleResponse> saveUserImage(
-            @RequestParam(value = "image", required = false) MultipartFile image) {
-        return userService.saveUserProfile(image);
-    }
 }
