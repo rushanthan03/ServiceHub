@@ -8,6 +8,7 @@ import com.backend.servicehub.dto.response.UserResponse;
 import com.backend.servicehub.entity.User;
 import com.backend.servicehub.repository.UserRepository;
 import com.backend.servicehub.security.JwtUtil;
+import com.backend.servicehub.service.S3Service;
 import com.backend.servicehub.service.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +20,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashSet;
 import java.util.List;
@@ -37,9 +41,11 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final S3Service s3Service;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(12);
+    public static final String USER_IMAGE = "UserProfileImage";
 
     @Transactional
     public ResponseEntity<SimpleResponse> saveUser(UserRequest userRequest) {
@@ -49,6 +55,7 @@ public class UserServiceImpl implements UserService {
         if (existingUserOpt.isPresent()) {
             return ResponseEntity.ok(SimpleResponse.builder().success(false).message("User name already exists").build());
         }
+
         // New user registration
         User user = User.builder()
                 .email(normalizedEmail)
@@ -68,6 +75,45 @@ public class UserServiceImpl implements UserService {
                 .build());
     }
 
+    @Override
+    public ResponseEntity<SimpleResponse> saveUserProfile(MultipartFile profileImage) {
+        Optional<User> optionalUser = getOptionalCurrentUser();
+
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    SimpleResponse.builder()
+                            .success(false)
+                            .message("User not found or not authenticated")
+                            .build()
+            );
+        }
+
+        User user = optionalUser.get();
+        String profileImageKey = null;
+
+        if (profileImage != null && !profileImage.isEmpty()) {
+            try {
+                profileImageKey = s3Service.uploadFile(USER_IMAGE, profileImage);
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().body(
+                        SimpleResponse.builder()
+                                .success(false)
+                                .message("Image upload failed: " + e.getMessage())
+                                .build()
+                );
+            }
+        }
+
+        user.setProfileImage(profileImageKey);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(
+                SimpleResponse.builder()
+                        .success(true)
+                        .message("User image updated successfully")
+                        .build()
+        );
+    }
 
     @Transactional
     public ResponseEntity<SimpleResponse> updateUser(Long id, UserRequest userRequest) {
@@ -100,6 +146,11 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToDUserResponse(User user) {
+        String imageUrl = null;
+
+        if (user.getProfileImage() != null) {
+            imageUrl = s3Service.generatePresignedUrl(user.getProfileImage());
+        }
         return UserResponse.builder()
                 .id(user.getId())
                 .firstName(user.getFirstName())
@@ -109,6 +160,7 @@ public class UserServiceImpl implements UserService {
                 .dateOfBirth(user.getDateOfBirth())
                 .gender(user.getGender())
                 .isActive(user.isActive())
+                .profileImage(imageUrl)
                 .build();
     }
 
@@ -182,4 +234,14 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public Optional<User> getOptionalCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return Optional.empty();
+        }
+
+        String email = authentication.getName();
+        return userRepository.findByEmail(email);
+    }
 }

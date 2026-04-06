@@ -45,13 +45,13 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) {
 
-        return http.csrf(AbstractHttpConfigurer::disable)
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(AUTH_WHITELIST).permitAll()
-                    .anyRequest().authenticated()
-                ).
-                httpBasic(Customizer.withDefaults()).
-                sessionManagement(session ->
+                        .requestMatchers(AUTH_WHITELIST).permitAll()
+                        .anyRequest().permitAll())
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

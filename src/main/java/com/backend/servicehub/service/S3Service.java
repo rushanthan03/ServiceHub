@@ -1,4 +1,12 @@
 package com.backend.servicehub.service;
 
-public class S3Service {
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+
+public interface S3Service {
+
+    String uploadFile(String folder,MultipartFile file) throws IOException;
+
+    String generatePresignedUrl(String key);
 }

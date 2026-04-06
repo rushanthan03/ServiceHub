@@ -29,5 +29,6 @@ public class User extends Auditable {
     private String gender;
     private String mobile;
     private boolean isActive;
+    private String profileImage;
 
 }

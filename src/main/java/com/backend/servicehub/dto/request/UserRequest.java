@@ -13,5 +13,4 @@ public class UserRequest {
     private LocalDate dateOfBirth;
     private String gender;
     private String mobile;
-    private boolean isActive;
 }
