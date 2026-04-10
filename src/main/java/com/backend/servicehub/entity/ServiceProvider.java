@@ -23,10 +23,10 @@ public class ServiceProvider extends Auditable {
 
     @ManyToMany
     @JoinTable(
-            name = "provider_service",
+            name = "provider_service_type",
             joinColumns = @JoinColumn(name = "service_provider_id"),
-            inverseJoinColumns = @JoinColumn(name = "service_id")
+            inverseJoinColumns = @JoinColumn(name = "service_type_id")
     )
-    private List<Service> services;
+    private List<ServiceType> serviceTypes;
 
 }
