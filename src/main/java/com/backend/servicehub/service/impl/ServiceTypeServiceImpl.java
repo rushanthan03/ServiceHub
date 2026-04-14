@@ -6,6 +6,7 @@ import com.backend.servicehub.dto.response.ServiceTypeResponse;
 import com.backend.servicehub.dto.response.SimpleResponse;
 import com.backend.servicehub.entity.ServiceType;
 import com.backend.servicehub.repository.ServiceRepository;
+import com.backend.servicehub.service.S3Service;
 import com.backend.servicehub.service.ServiceTypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,8 +14,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +27,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class ServiceTypeServiceImpl implements ServiceTypeService {
     private final ServiceRepository serviceRepository;
+    private final S3Service s3Service;
+    public static final String SERVICE_TYPE_IMAGE = "ServiceTypeImage";
+
 
     @Override
     public ResponseEntity<SimpleResponse> saveServiceTypeDetails(ServiceTypeRequest serviceTypeRequest) {
@@ -117,5 +123,43 @@ public class ServiceTypeServiceImpl implements ServiceTypeService {
                 .build();
     }
 
+    @Override
+    public ResponseEntity<SimpleResponse> serviceTypeImage(Long id, MultipartFile icon) {
 
+        Optional<ServiceType> existingServiceOptional = serviceRepository.findById(id);
+
+        if (existingServiceOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                    SimpleResponse.builder()
+                            .success(false)
+                            .message("Service type not found")
+                            .build()
+            );
+        }
+
+        ServiceType existingServiceType = existingServiceOptional.get();
+
+        if (icon != null && !icon.isEmpty()) {
+            try {
+                String profileImageKey = s3Service.uploadFile(SERVICE_TYPE_IMAGE, icon);
+                existingServiceType.setIcon(profileImageKey);
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().body(
+                        SimpleResponse.builder()
+                                .success(false)
+                                .message("Image upload failed: " + e.getMessage())
+                                .build()
+                );
+            }
+        }
+
+        serviceRepository.save(existingServiceType);
+
+        return ResponseEntity.ok(
+                SimpleResponse.builder()
+                        .success(true)
+                        .message("Service image updated successfully")
+                        .build()
+        );
+    }
 }

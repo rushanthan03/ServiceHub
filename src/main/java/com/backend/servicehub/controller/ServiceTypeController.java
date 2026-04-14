@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -46,6 +47,14 @@ public class ServiceTypeController {
             @RequestParam(value = "pageCount", required = false, defaultValue = "1") Integer pageCount) {
         PaginatedResponse response = serviceTypeService.filterServiceType(search, pageSize, pageCount);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = "/update-service_image")
+    public ResponseEntity<SimpleResponse> saveServiceImage(
+            @RequestParam(value = "id") Long id,
+            @RequestParam(value = "image") MultipartFile image
+    ) {
+        return serviceTypeService.serviceTypeImage(id, image);
     }
 
 }
