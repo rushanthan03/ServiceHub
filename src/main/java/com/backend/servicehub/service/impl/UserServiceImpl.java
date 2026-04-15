@@ -1,13 +1,14 @@
 package com.backend.servicehub.service.impl;
 
-import com.backend.servicehub.dto.request.LoginRequest;
 import com.backend.servicehub.dto.request.UserRequest;
 import com.backend.servicehub.dto.response.PaginatedResponse;
 import com.backend.servicehub.dto.response.SimpleResponse;
 import com.backend.servicehub.dto.response.UserResponse;
+import com.backend.servicehub.entity.Role;
 import com.backend.servicehub.entity.User;
+import com.backend.servicehub.repository.RoleRepository;
 import com.backend.servicehub.repository.UserRepository;
-import com.backend.servicehub.security.JwtUtil;
+import com.backend.servicehub.service.AuthService;
 import com.backend.servicehub.service.S3Service;
 import com.backend.servicehub.service.UserService;
 import jakarta.transaction.Transactional;
@@ -22,10 +23,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,9 +38,9 @@ import java.util.Set;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final S3Service s3Service;
-    private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager;
+    private final AuthService authService;
     private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder(12);
     public static final String USER_IMAGE = "UserProfileImage";
 
@@ -55,7 +52,14 @@ public class UserServiceImpl implements UserService {
         if (existingUserOpt.isPresent()) {
             return ResponseEntity.ok(SimpleResponse.builder().success(false).message("User name already exists").build());
         }
+        List<Role> roles = roleRepository.findAllById(userRequest.getRoles());
 
+        if (roles.isEmpty()) {
+            return ResponseEntity.badRequest().body(SimpleResponse.builder()
+                    .success(false)
+                    .message("No valid roles found")
+                    .build());
+        }
         // New user registration
         User user = User.builder()
                 .email(normalizedEmail)
@@ -66,6 +70,7 @@ public class UserServiceImpl implements UserService {
                 .firstName(userRequest.getFirstName())
                 .lastName(userRequest.getLastName())
                 .isActive(true)
+                .roles(roles)
                 .build();
         userRepository.save(user);
 
@@ -77,7 +82,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<SimpleResponse> saveUserProfile(MultipartFile profileImage) {
-        Optional<User> optionalUser = getOptionalCurrentUser();
+        Optional<User> optionalUser = authService.getOptionalCurrentUser();
 
         if (optionalUser.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
@@ -222,26 +227,4 @@ public class UserServiceImpl implements UserService {
 
     }
 
-    @Override
-    public String login(LoginRequest loginRequest) {
-        Authentication authentication =
-                authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
-
-        if (authentication.isAuthenticated()) {
-            return jwtUtil.generateToken(loginRequest.getEmail());
-        } else {
-            return "fail";
-        }
-    }
-
-    @Override
-    public Optional<User> getOptionalCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return Optional.empty();
-        }
-
-        String email = authentication.getName();
-        return userRepository.findByEmail(email);
-    }
 }

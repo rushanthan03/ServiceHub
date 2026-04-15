@@ -3,6 +3,7 @@ package com.backend.servicehub.dto.request;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class UserRequest {
@@ -13,4 +14,5 @@ public class UserRequest {
     private LocalDate dateOfBirth;
     private String gender;
     private String mobile;
+    private List<Long> roles;
 }

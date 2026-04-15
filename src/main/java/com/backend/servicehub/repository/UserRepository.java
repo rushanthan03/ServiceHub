@@ -1,6 +1,7 @@
 package com.backend.servicehub.repository;
 
 import com.backend.servicehub.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,5 +24,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("isActive") Boolean isActive,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByEmail(String normalizedEmail);
 }

@@ -18,7 +18,16 @@ public class UserDetailImp implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority("USER"));
+        if (user.getRoles() == null || user.getRoles().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return user.getRoles().stream()
+                .map(role -> role.getName() != null ? role.getName().trim() : "")
+                .filter(roleName -> !roleName.isEmpty())
+                .map(roleName -> roleName.startsWith("ROLE_") ? roleName : "ROLE_" + roleName)
+                .map(SimpleGrantedAuthority::new)
+                .toList();
     }
 
     @Override
@@ -48,6 +57,6 @@ public class UserDetailImp implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return user.isActive();
     }
 }

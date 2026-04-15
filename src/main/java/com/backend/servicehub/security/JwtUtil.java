@@ -1,9 +1,11 @@
 package com.backend.servicehub.security;
 
+import com.backend.servicehub.common.TokenType;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -16,37 +18,54 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+
 @Service
 public class JwtUtil {
 
-    private String secretkey = "";
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.access-token.expiration-time}")
+    private Long jwtAccessTokenExpirationMs;
+
+    @Value("${jwt.refresh-token.expiration-time}")
+    private Long jwtRefreshTokenExpirationMs;
 
     public JwtUtil() {
 
         try {
             KeyGenerator keyGen = KeyGenerator.getInstance("HmacSHA256");
             SecretKey sk = keyGen.generateKey();
-            secretkey = Base64.getEncoder().encodeToString(sk.getEncoded());
+            jwtSecret = Base64.getEncoder().encodeToString(sk.getEncoded());
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public String generateToken(String email) {
+    public String generateAccessToken(String email) {
+        return buildToken(email, jwtAccessTokenExpirationMs, TokenType.ACCESS);
+    }
+
+    public String generateRefreshToken(String email) {
+        return buildToken(email, jwtRefreshTokenExpirationMs, TokenType.REFRESH);
+    }
+
+    private String buildToken(String email, Long expirationMs, TokenType tokenType) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenType", tokenType.name());
         return Jwts.builder()
                 .claims()
                 .add(claims)
                 .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 30))
+                .expiration(new Date(System.currentTimeMillis() + expirationMs))
                 .and()
                 .signWith(getKey())
                 .compact();
     }
 
     private SecretKey getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretkey);
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -70,7 +89,19 @@ public class JwtUtil {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String userName = extractUserName(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return userName.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    public boolean validateToken(String token, UserDetails userDetails, TokenType tokenType) {
+        return validateToken(token, userDetails) && tokenType == extractTokenType(token);
+    }
+
+    public TokenType extractTokenType(String token) {
+        String tokenTypeValue = extractClaim(token, claims -> claims.get("tokenType", String.class));
+        if (tokenTypeValue == null) {
+            return TokenType.ACCESS;
+        }
+        return TokenType.valueOf(tokenTypeValue);
     }
 
     private boolean isTokenExpired(String token) {

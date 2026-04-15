@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Builder
 @Data
@@ -18,4 +19,5 @@ public class UserResponse {
     private String mobile;
     private boolean isActive;
     private String profileImage;
+    private List<RoleResponse> roleResponseList;
 }

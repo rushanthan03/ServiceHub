@@ -16,6 +16,7 @@ public class ServiceProvider extends Auditable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
     private Long id;
+    private String name;
 
     @OneToOne
     @JoinColumn(name = "user_id")
