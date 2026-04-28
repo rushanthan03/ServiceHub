@@ -26,4 +26,12 @@ public class Booking extends Auditable {
     private LocalDate bookingDate;
     private String reference;
 
+    @ManyToOne
+    @JoinColumn(name = "availability_id")
+    private Availability availability;
+
+    @ManyToOne
+    @JoinColumn(name = "customer_id")
+    private User customer;
+
 }
